@@ -1,6 +1,6 @@
 const express = require('express');
 const axios = require('axios');
-const cors = require('cors');  // Importar el paquete CORS
+const cors = require('cors');  
 const app = express();
 
 app.use(cors());
@@ -10,34 +10,45 @@ app.post('/submit', async (req, res) => {
     const { name, phone, email, etiqueta } = req.body;
     console.log("Datos recibidos en el backend:", { name, phone, email, etiqueta });
 
-    // Buscar en Notion si ya existe un número de teléfono
+    // Iniciar medición de tiempo
+    console.time('Tiempo de ejecución total');
+
     try {
-        const searchResponse = await axios.post('https://api.notion.com/v1/databases/e1c86c0d490c4ccdb7b3d92007dea981/query', 
-        {
-            filter: {
-                property: 'Telefono',  // Asegúrate de que este campo coincida con el nombre exacto en Notion
-                phone_number: {
-                    equals: phone
+        // Medir el tiempo que tarda la búsqueda en Notion
+        console.time('Búsqueda en Notion');
+        const searchResponse = await axios.post(
+            'https://api.notion.com/v1/databases/e1c86c0d490c4ccdb7b3d92007dea981/query', 
+            {
+                filter: {
+                    property: 'Telefono',  
+                    phone_number: {
+                        equals: phone
+                    }
+                }
+            }, 
+            {
+                headers: {
+                    'Authorization': 'Bearer secret_uCBoeC7cnlFtq7VG4Dr58nBYFLFbR6dKzF00fZt2dq',  
+                    'Content-Type': 'application/json',
+                    'Notion-Version': '2022-06-28'
                 }
             }
-        }, 
-        {
-            headers: {
-                'Authorization': 'Bearer secret_uCBoeC7cnlFtq7VG4Dr58nBYFLFbR6dKzF00fZt2dq',  // Reemplaza con tu clave API de Notion
-                'Content-Type': 'application/json',
-                'Notion-Version': '2022-06-28'
-            }
-        });
+        );
+        console.timeEnd('Búsqueda en Notion'); // Fin de la medición de búsqueda
 
         // Verificar si ya existe un registro con el número de teléfono
         if (searchResponse.data.results.length > 0) {
-            // Si ya existe, enviar una respuesta indicando que el número está registrado
+            console.timeEnd('Tiempo de ejecución total'); // Finaliza la medición total
             return res.status(409).json({ message: 'El número de teléfono ya está registrado' });
         }
 
-        // Si el número no está registrado, procedemos a crear un nuevo registro
+        // Enviar una respuesta inmediatamente al frontend
+        res.status(200).json({ message: 'Redirigiendo a WhatsApp...' });
+
+        // Medir el tiempo que tarda la creación del registro en Notion
+        console.time('Creación de registro en Notion');
         const notionData = {
-            parent: { database_id: 'e1c86c0d490c4ccdb7b3d92007dea981' },  // ID de tu base de datos de Notion
+            parent: { database_id: 'e1c86c0d490c4ccdb7b3d92007dea981' },  
             properties: {
                 'Nombre': {
                     title: [
@@ -51,7 +62,7 @@ app.post('/submit', async (req, res) => {
                 'Email': {
                     email: email
                 },
-                'Telefono': {  // Campo de tipo phone_number en Notion
+                'Telefono': {  
                     phone_number: phone
                 },
                 'Proyecto': {
@@ -64,22 +75,23 @@ app.post('/submit', async (req, res) => {
             }
         };
 
-        // Hacer la petición POST a Notion para crear el nuevo registro
-        const createResponse = await axios.post('https://api.notion.com/v1/pages', notionData, {
+        await axios.post('https://api.notion.com/v1/pages', notionData, {
             headers: {
-                'Authorization': 'Bearer secret_uCBoeC7cnlFtq7VG4Dr58nBYFLFbR6dKzF00fZt2dq',  // Reemplaza con tu clave API de Notion
+                'Authorization': 'Bearer secret_uCBoeC7cnlFtq7VG4Dr58nBYFLFbR6dKzF00fZt2dq',  
                 'Content-Type': 'application/json',
                 'Notion-Version': '2022-06-28'
             }
         });
+        console.timeEnd('Creación de registro en Notion'); // Fin de la medición de creación de registro
 
-        // Enviar una respuesta exitosa al cliente
-        res.status(200).json({ message: 'Datos enviados correctamente a Notion' });
+        console.log('Datos enviados correctamente a Notion');
 
     } catch (error) {
-        console.error('Error al procesar la solicitud:', error);  // Log para verificar el error
-        res.status(500).json({ message: 'Error al procesar la solicitud' });
+        console.error('Error al procesar la solicitud:', error); 
     }
+
+    // Finalizar medición de tiempo total
+    console.timeEnd('Tiempo de ejecución total');
 });
 
 // Iniciar el servidor
