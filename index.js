@@ -61,23 +61,29 @@ app.post('/submit', async (req, res) => {
         const notionData = {
             parent: { database_id: notionDatabaseId },
             properties: {
-                'Nombre': {
-                    title: [
-                        {
-                            text: {
-                                content: name
-                            }
-                        }
-                    ]
-                },
-                'Email': {
-                    email: email
-                },
-                'Telefono': {  
-                    phone_number: phone
+              'Nombre': {
+                title: [
+                  {
+                    text: {
+                      content: name
+                    }
+                  }
+                ]
+              },
+              'Email': {
+                email: email
+              },
+              'Telefono': {
+                phone_number: phone
+              },
+              'Estado': { // Agregar el estado como Prospecto
+                select: {
+                  name: 'Prospecto'
                 }
+              }
             }
-        };
+          };
+          
 
         const createResponse = await axios.post('https://api.notion.com/v1/pages', notionData, {
             headers: {
